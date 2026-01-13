@@ -41,5 +41,5 @@ temp_*.csv
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Streamlit
-.streamlit/secrets.toml
+# Vercel
+.vercel

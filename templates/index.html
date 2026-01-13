@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📍 Polygon Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f5f5f5;
+            border: none;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            background: #e8e8e8;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        input[type="file"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border-left: 4px solid #388e3c;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+        
+        .alert-warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border-left: 4px solid #f57c00;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .results.active {
+            display: block;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .results-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .results-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .download-btn {
+            margin-top: 20px;
+            background: #4caf50;
+        }
+        
+        .download-btn:hover {
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+        
+        .settings {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+        
+        .settings h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .columns {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📍 Polygon Analyzer</h1>
+            <p>Analyze eateries, offices, apartments, PGs, gyms, and salons within polygons</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('metrics')">📍 Geo Metrics</button>
+            <button class="tab" onclick="switchTab('mapping')">🗺️ Geo Mapping</button>
+        </div>
+        
+        <div class="content">
+            <!-- Geo Metrics Tab -->
+            <div id="metrics" class="tab-content active">
+                <div class="settings">
+                    <h3>⚙️ Settings</h3>
+                    <div class="form-group">
+                        <label for="google-api-key">Google Maps API Key *</label>
+                        <input type="text" id="google-api-key" placeholder="Enter your Google Maps API key">
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>📋 Instructions:</strong>
+                    <ol style="margin-top: 10px; margin-left: 20px;">
+                        <li>Upload a CSV file with columns: <code>WKT</code> (polygon coordinates) and <code>name</code> (polygon name)</li>
+                        <li>Click "Analyze Polygons" to process</li>
+                        <li>Download the results CSV with additional analysis columns</li>
+                    </ol>
+                </div>
+                
+                <div class="form-group">
+                    <label for="csv-file">📤 Upload CSV File</label>
+                    <input type="file" id="csv-file" accept=".csv">
+                </div>
+                
+                <div id="metrics-alert"></div>
+                
+                <div class="loading" id="metrics-loading">
+                    <div class="spinner"></div>
+                    <p>Processing polygons... This may take a few minutes.</p>
+                </div>
+                
+                <button class="btn" onclick="analyzePolygons()">🚀 Analyze Polygons</button>
+                
+                <div id="metrics-results" class="results"></div>
+            </div>
+            
+            <!-- Geo Mapping Tab -->
+            <div id="mapping" class="tab-content">
+                <div class="settings">
+                    <h3>⚙️ Settings</h3>
+                    <div class="form-group">
+                        <label for="mapbox-token">Mapbox API Token *</label>
+                        <input type="text" id="mapbox-token" placeholder="Enter your Mapbox API token">
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>🗺️ How it works:</strong>
+                    <ol style="margin-top: 10px; margin-left: 20px;">
+                        <li>Enter origin coordinates (latitude, longitude)</li>
+                        <li>Specify the polygon name and time limit (minutes)</li>
+                        <li>Mapbox calculates the reachable area within the time limit</li>
+                        <li>Download the CSV file with WKT polygons ready for Google My Maps</li>
+                    </ol>
+                </div>
+                
+                <div class="form-group">
+                    <label for="center-coords">📍 Origin Coordinates (Latitude, Longitude)</label>
+                    <input type="text" id="center-coords" placeholder="12.93526, 77.62262" value="12.93526, 77.62262">
+                </div>
+                
+                <div class="form-group">
+                    <label for="polygon-name">Polygon Name</label>
+                    <input type="text" id="polygon-name" placeholder="Kitchen 10-min Isochrone" value="Kitchen 10-min Isochrone">
+                </div>
+                
+                <div class="form-group">
+                    <label for="time-limit">Time Limit (minutes)</label>
+                    <input type="number" id="time-limit" min="1" value="10">
+                </div>
+                
+                <div class="form-group">
+                    <label for="routing-profile">Routing Profile</label>
+                    <select id="routing-profile">
+                        <option value="driving">Driving</option>
+                        <option value="driving-traffic">Driving (with traffic)</option>
+                        <option value="walking">Walking</option>
+                        <option value="cycling">Cycling</option>
+                    </select>
+                </div>
+                
+                <div id="mapping-alert"></div>
+                
+                <div class="loading" id="mapping-loading">
+                    <div class="spinner"></div>
+                    <p>Generating isochrone polygon using Mapbox API...</p>
+                </div>
+                
+                <button class="btn" onclick="generateIsochrone()">🚀 Generate Isochrone Polygon</button>
+                
+                <div id="mapping-results" class="results"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            
+            // Clear alerts
+            document.getElementById('metrics-alert').innerHTML = '';
+            document.getElementById('mapping-alert').innerHTML = '';
+        }
+        
+        function showAlert(containerId, message, type) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+        
+        async function analyzePolygons() {
+            const apiKey = document.getElementById('google-api-key').value.trim();
+            const fileInput = document.getElementById('csv-file');
+            
+            // Validation
+            if (!apiKey) {
+                showAlert('metrics-alert', '⚠️ Please enter your Google Maps API key', 'warning');
+                return;
+            }
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showAlert('metrics-alert', '⚠️ Please select a CSV file', 'warning');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('google_maps_api_key', apiKey);
+            
+            // Show loading
+            document.getElementById('metrics-loading').style.display = 'block';
+            document.getElementById('metrics-results').classList.remove('active');
+            showAlert('metrics-alert', '', '');
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'polygon_analysis_results.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showAlert('metrics-alert', '✅ Analysis complete! File downloaded.', 'success');
+                } else {
+                    const error = await response.json();
+                    showAlert('metrics-alert', `❌ Error: ${error.error || 'Analysis failed'}`, 'error');
+                }
+            } catch (error) {
+                showAlert('metrics-alert', `❌ Error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('metrics-loading').style.display = 'none';
+            }
+        }
+        
+        async function generateIsochrone() {
+            const mapboxToken = document.getElementById('mapbox-token').value.trim();
+            const centerCoords = document.getElementById('center-coords').value.trim();
+            const polygonName = document.getElementById('polygon-name').value.trim();
+            const timeLimit = parseInt(document.getElementById('time-limit').value);
+            const routingProfile = document.getElementById('routing-profile').value;
+            
+            // Validation
+            if (!mapboxToken) {
+                showAlert('mapping-alert', '⚠️ Please enter your Mapbox API token', 'warning');
+                return;
+            }
+            
+            if (!polygonName) {
+                showAlert('mapping-alert', '⚠️ Please enter a polygon name', 'warning');
+                return;
+            }
+            
+            const coords = centerCoords.split(',').map(c => c.trim());
+            if (coords.length !== 2) {
+                showAlert('mapping-alert', '⚠️ Please enter coordinates in format: latitude, longitude', 'warning');
+                return;
+            }
+            
+            const centerLat = parseFloat(coords[0]);
+            const centerLng = parseFloat(coords[1]);
+            
+            if (isNaN(centerLat) || centerLat < -90 || centerLat > 90) {
+                showAlert('mapping-alert', '⚠️ Latitude must be between -90 and 90', 'warning');
+                return;
+            }
+            
+            if (isNaN(centerLng) || centerLng < -180 || centerLng > 180) {
+                showAlert('mapping-alert', '⚠️ Longitude must be between -180 and 180', 'warning');
+                return;
+            }
+            
+            const requestData = {
+                center_lat: centerLat,
+                center_lng: centerLng,
+                time_limit_minutes: timeLimit,
+                polygon_name: polygonName,
+                mapbox_token: mapboxToken,
+                routing_profile: routingProfile,
+                generalize_meters: 0.0
+            };
+            
+            // Show loading
+            document.getElementById('mapping-loading').style.display = 'block';
+            document.getElementById('mapping-results').classList.remove('active');
+            showAlert('mapping-alert', '', '');
+            
+            try {
+                const response = await fetch('/api/isochrone', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Display results
+                    const resultsDiv = document.getElementById('mapping-results');
+                    resultsDiv.innerHTML = `
+                        <h3>📊 Generated Polygon</h3>
+                        <p><strong>Name:</strong> ${data.polygon_name}</p>
+                        <p><strong>WKT:</strong> <code style="word-break: break-all;">${data.wkt.substring(0, 200)}...</code></p>
+                        <button class="btn download-btn" onclick="downloadIsochroneCSV('${data.csv.replace(/'/g, "\\'")}')">📥 Download CSV</button>
+                    `;
+                    resultsDiv.classList.add('active');
+                    
+                    showAlert('mapping-alert', '✅ Polygon generated successfully!', 'success');
+                } else {
+                    showAlert('mapping-alert', `❌ Error: ${data.error || 'Failed to generate polygon'}`, 'error');
+                }
+            } catch (error) {
+                showAlert('mapping-alert', `❌ Error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('mapping-loading').style.display = 'none';
+            }
+        }
+        
+        function downloadIsochroneCSV(csvContent) {
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'isochrone_polygon.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>

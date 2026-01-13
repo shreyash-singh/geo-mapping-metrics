@@ -2,25 +2,28 @@
 
 ## 🚀 Fastest Way to Get Started
 
-### Option 1: Web App (Recommended - Easiest)
+### Option 1: API Server
 
 1. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Start the web app:**
+2. **Set environment variables:**
    ```bash
-   streamlit run app.py
+   export GOOGLE_MAPS_API_KEY="your-api-key"
+   export MAPBOX_API_TOKEN="your-mapbox-token"  # Optional
    ```
 
-3. **Open your browser** to the URL shown (usually `http://localhost:8501`)
+3. **Start the API server:**
+   ```bash
+   python app.py
+   ```
 
-4. **Upload your CSV file** with `WKT` and `name` columns
-
-5. **Click "Analyze Polygons"** and wait for results
-
-6. **Download the results CSV** with analysis columns
+4. **Use the API endpoints:**
+   - `GET /` - Health check
+   - `POST /api/analyze` - Upload CSV file for analysis
+   - `POST /api/isochrone` - Generate isochrone polygon
 
 ### Option 2: Python Script
 

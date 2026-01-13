@@ -16,15 +16,24 @@ import datetime
 
 
 class PolygonAnalyzer:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str = None):
         """
         Initialize the Polygon Analyzer with Google Maps API key
         
         Args:
-            api_key: Google Maps API key
+            api_key: Google Maps API key (optional, required only for Google Maps operations)
         """
-        self.gmaps = googlemaps.Client(key=api_key)
-        self.api_key = api_key
+        self.api_key = api_key or ''
+        # Only initialize googlemaps client if API key is provided and not empty
+        # This allows the class to be used for Mapbox-only operations
+        if self.api_key and self.api_key.strip():
+            try:
+                self.gmaps = googlemaps.Client(key=self.api_key)
+            except Exception:
+                # If initialization fails, set to None - will fail later if Google Maps is used
+                self.gmaps = None
+        else:
+            self.gmaps = None
     
     @staticmethod
     def parse_wkt_polygon(wkt_string: str) -> List[Tuple[float, float]]:
@@ -958,9 +967,6 @@ class PolygonAnalyzer:
         # Extract sorted points (outside to inside)
         sorted_candidate_points = [point for point, _ in candidate_points_with_distance]
 
-        st_progress = getattr(self, "_st_progress", None)
-        st_status = getattr(self, "_st_status", None) if st_progress else None
-
         reachable_points: List[Tuple[float, float]] = []
         total_candidates = len(sorted_candidate_points)
         api_failures = 0
@@ -972,11 +978,6 @@ class PolygonAnalyzer:
 
         # Evaluate points from outside to inside (perimeter to center)
         for idx, point in enumerate(sorted_candidate_points, start=1):
-            if st_progress:
-                st_progress.progress(min(0.98, idx / total_candidates))
-                if st_status:
-                    st_status.text(f"Evaluating point {idx}/{total_candidates} (outside→in)... (Found: {len(reachable_points)} reachable)")
-
             duration_seconds, mode_used, error_msg = self._get_travel_time_seconds_with_fallback(
                 origin=(center_lat, center_lng),
                 destination=point,
@@ -1052,11 +1053,6 @@ class PolygonAnalyzer:
 
         coords = list(polygon.exterior.coords)
         lat_lng_coords = [(lat, lng) for (lng, lat) in coords]
-
-        if st_progress:
-            st_progress.progress(1.0)
-            if st_status:
-                st_status.text("Isochrone generation complete ✅")
 
         return lat_lng_coords
 
