@@ -22,12 +22,27 @@ page = st.sidebar.radio("Navigate to", ["Geo Metrics", "Geo Mapping"])
 
 # Sidebar for API key
 st.sidebar.header("Settings")
+
+# Try to get API keys from secrets (for Streamlit Cloud), otherwise use empty default
+try:
+    default_google_key = st.secrets.get("GOOGLE_MAPS_API_KEY", "")
+    default_mapbox_key = st.secrets.get("MAPBOX_API_TOKEN", "")
+except (AttributeError, FileNotFoundError, KeyError):
+    # Secrets not available (local development)
+    default_google_key = ""
+    default_mapbox_key = ""
+
+# Google Maps API Key input
 api_key = st.sidebar.text_input(
     "Google Maps API Key",
-    value="AIzaSyDcuwSXSdSnL-Aqd6VFGgTD7KmTbKlUJAI",
+    value=default_google_key,
     type="password",
-    help="Your Google Maps API key (already configured)"
+    help="⚠️ REQUIRED: Enter your own Google Maps API key. Get one at: https://console.cloud.google.com/apis/credentials",
+    placeholder="Enter your Google Maps API key"
 )
+
+if not api_key:
+    st.sidebar.warning("⚠️ Please enter your Google Maps API key to use Geo Metrics")
 
 # Initialize analyzer
 def get_analyzer(api_key):
@@ -195,12 +210,23 @@ elif page == "Geo Mapping":
     
     # Mapbox API Key in sidebar
     st.sidebar.header("Mapbox Settings")
+    
+    # Try to get from secrets, otherwise use empty
+    try:
+        default_mapbox = st.secrets.get("MAPBOX_API_TOKEN", "")
+    except (AttributeError, FileNotFoundError, KeyError):
+        default_mapbox = ""
+    
     mapbox_token = st.sidebar.text_input(
         "Mapbox API Token",
-        value="pk.eyJ1Ijoibml0aW5nMjEiLCJhIjoiY21rY2RqeDFuMDg0MDNjcXpnNnFpYTlwcyJ9.If__r7y4rp0GcIcWeTQlOg",
+        value=default_mapbox,
         type="password",
-        help="Your Mapbox API token (default provided)"
+        help="⚠️ REQUIRED: Enter your own Mapbox API token. Get one at: https://account.mapbox.com/access-tokens/",
+        placeholder="Enter your Mapbox API token"
     )
+    
+    if not mapbox_token:
+        st.sidebar.warning("⚠️ Please enter your Mapbox API token to use Geo Mapping")
     
     # Input form
     st.header("📍 Input Parameters")
