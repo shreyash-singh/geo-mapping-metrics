@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment variables and secrets
+.env
+*.key
+*.pem
+
+# Data files (optional - uncomment if you don't want to track CSV files)
+# *.csv
+# *.xlsx
+# *.json
+
+# Logs
+*.log
+analysis_output.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp_*.csv
+*.tmp
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Streamlit
+.streamlit/secrets.toml
