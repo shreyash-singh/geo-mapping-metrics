@@ -30,7 +30,7 @@ def health():
     """Health check endpoint"""
     return jsonify({
         "status": "ok",
-        "message": "Polygon Analyzer API is running",
+        "message": "Conquest API is running",
         "endpoints": {
             "/api/analyze": "POST - Analyze polygons from CSV file",
             "/api/isochrone": "POST - Generate isochrone polygon"
@@ -47,7 +47,25 @@ def analyze_polygons():
         - google_maps_api_key: (optional) Google Maps API key (if not in env)
     
     Response:
-        - CSV file with analysis results
+        {
+            "data": [...],  # Array of result objects
+            "csv": str,     # CSV content as string
+            "summary": {    # Summary statistics
+                "total_polygons": int,
+                "total_eateries": int,
+                "total_offices": int,
+                "total_apartments": int,
+                "total_pgs": int,
+                "total_gyms": int,
+                "total_salons": int,
+                "avg_eateries": float,
+                "avg_offices": float,
+                "avg_apartments": float,
+                "avg_pgs": float,
+                "avg_gyms": float,
+                "avg_salons": float
+            }
+        }
     """
     try:
         # Get API key from request or environment
@@ -96,22 +114,36 @@ def analyze_polygons():
             results_df.to_csv(csv_buffer, index=False)
             csv_data = csv_buffer.getvalue()
             
-            # Create response
-            output = io.BytesIO()
-            output.write(csv_data.encode('utf-8'))
-            output.seek(0)
+            # Convert DataFrame to list of dictionaries for JSON response
+            results_data = results_df.to_dict('records')
             
-            return send_file(
-                output,
-                mimetype='text/csv',
-                as_attachment=True,
-                download_name='polygon_analysis_results.csv'
-            )
+            # Calculate summary statistics
+            summary = {
+                "total_polygons": len(results_df),
+                "total_eateries": int(results_df['no. of eateries'].sum()),
+                "total_offices": int(results_df['no. of offices'].sum()),
+                "total_apartments": int(results_df['no. of apartments'].sum()),
+                "total_pgs": int(results_df['no. of PGs'].sum()),
+                "total_gyms": int(results_df['no. of gyms'].sum()),
+                "total_salons": int(results_df['no. of salons'].sum()),
+                "avg_eateries": float(results_df['no. of eateries'].mean()),
+                "avg_offices": float(results_df['no. of offices'].mean()),
+                "avg_apartments": float(results_df['no. of apartments'].mean()),
+                "avg_pgs": float(results_df['no. of PGs'].mean()),
+                "avg_gyms": float(results_df['no. of gyms'].mean()),
+                "avg_salons": float(results_df['no. of salons'].mean())
+            }
+            
+            return jsonify({
+                "data": results_data,
+                "csv": csv_data,
+                "summary": summary
+            })
         finally:
             # Clean up temp file
             if os.path.exists(tmp_input_path):
                 os.remove(tmp_input_path)
-    
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

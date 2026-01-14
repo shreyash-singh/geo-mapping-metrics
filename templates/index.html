@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📍 Polygon Analyzer</title>
+    <title>Conquest - Geo Analytics Platform</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f0fdf4;
             min-height: 100vh;
             padding: 20px;
         }
@@ -22,32 +22,36 @@
             max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.1);
             overflow: hidden;
+            border: 1px solid #dcfce7;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             color: white;
-            padding: 30px;
+            padding: 40px 30px;
             text-align: center;
         }
         
         .header h1 {
-            font-size: 2.5em;
+            font-size: 3em;
             margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
         
         .header p {
-            opacity: 0.9;
-            font-size: 1.1em;
+            opacity: 0.95;
+            font-size: 1.2em;
+            font-weight: 300;
         }
         
         .tabs {
             display: flex;
-            background: #f5f5f5;
-            border-bottom: 2px solid #e0e0e0;
+            background: #f9fafb;
+            border-bottom: 2px solid #dcfce7;
         }
         
         .tab {
@@ -55,26 +59,38 @@
             padding: 20px;
             text-align: center;
             cursor: pointer;
-            background: #f5f5f5;
+            background: #f9fafb;
             border: none;
             font-size: 1.1em;
             font-weight: 600;
-            color: #666;
+            color: #6b7280;
             transition: all 0.3s;
+            position: relative;
         }
         
         .tab:hover {
-            background: #e8e8e8;
+            background: #f3f4f6;
+            color: #16a34a;
         }
         
         .tab.active {
             background: white;
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
+            color: #16a34a;
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #22c55e;
         }
         
         .content {
             padding: 40px;
+            background: white;
         }
         
         .tab-content {
@@ -93,7 +109,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #333;
+            color: #1f2937;
         }
         
         input[type="text"],
@@ -101,35 +117,39 @@
         input[type="file"],
         select {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
+            padding: 12px 16px;
+            border: 2px solid #d1d5db;
             border-radius: 8px;
             font-size: 1em;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
+            background: white;
         }
         
         input:focus,
         select:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
         }
         
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
             color: white;
-            padding: 15px 30px;
+            padding: 16px 32px;
             border: none;
             border-radius: 8px;
             font-size: 1.1em;
             font-weight: 600;
             cursor: pointer;
             width: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
         }
         
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
         }
         
         .btn:active {
@@ -143,33 +163,33 @@
         }
         
         .alert {
-            padding: 15px;
+            padding: 16px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
         
         .alert-info {
-            background: #e3f2fd;
-            color: #1976d2;
-            border-left: 4px solid #1976d2;
+            background: #ecfdf5;
+            color: #166534;
+            border-left: 4px solid #22c55e;
         }
         
         .alert-success {
-            background: #e8f5e9;
-            color: #388e3c;
-            border-left: 4px solid #388e3c;
+            background: #f0fdf4;
+            color: #15803d;
+            border-left: 4px solid #22c55e;
         }
         
         .alert-error {
-            background: #ffebee;
-            color: #c62828;
-            border-left: 4px solid #c62828;
+            background: #fef2f2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
         }
         
         .alert-warning {
-            background: #fff3e0;
-            color: #f57c00;
-            border-left: 4px solid #f57c00;
+            background: #fffbeb;
+            color: #92400e;
+            border-left: 4px solid #f59e0b;
         }
         
         .loading {
@@ -179,8 +199,8 @@
         }
         
         .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #22c55e;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -195,9 +215,10 @@
         
         .results {
             margin-top: 30px;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 8px;
+            padding: 24px;
+            background: #f9fafb;
+            border-radius: 12px;
+            border: 1px solid #dcfce7;
             display: none;
         }
         
@@ -205,48 +226,64 @@
             display: block;
         }
         
+        .results h3 {
+            color: #1f2937;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
         .results-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .results-table th,
         .results-table td {
-            padding: 12px;
+            padding: 12px 16px;
             text-align: left;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e5e7eb;
         }
         
         .results-table th {
-            background: #667eea;
+            background: #22c55e;
             color: white;
             font-weight: 600;
         }
         
         .results-table tr:hover {
-            background: #f5f5f5;
+            background: #f0fdf4;
+        }
+        
+        .results-table tr:last-child td {
+            border-bottom: none;
         }
         
         .download-btn {
             margin-top: 20px;
-            background: #4caf50;
+            background: #16a34a;
         }
         
         .download-btn:hover {
-            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+            background: #15803d;
+            box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
         }
         
         .settings {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
+            background: #f0fdf4;
+            padding: 24px;
+            border-radius: 12px;
             margin-bottom: 25px;
+            border: 1px solid #dcfce7;
         }
         
         .settings h3 {
             margin-bottom: 15px;
-            color: #333;
+            color: #1f2937;
+            font-size: 1.2em;
         }
         
         .checkbox-group {
@@ -266,17 +303,56 @@
             gap: 15px;
         }
         
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #dcfce7;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .summary-card-label {
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .summary-card-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #16a34a;
+            margin-bottom: 4px;
+        }
+        
+        .summary-card-avg {
+            font-size: 0.85em;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        
         @media (max-width: 768px) {
             .columns {
                 grid-template-columns: 1fr;
             }
             
             .header h1 {
-                font-size: 2em;
+                font-size: 2.2em;
             }
             
             .content {
-                padding: 20px;
+                padding: 24px;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -284,8 +360,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📍 Polygon Analyzer</h1>
-            <p>Analyze eateries, offices, apartments, PGs, gyms, and salons within polygons</p>
+            <h1>Conquest</h1>
+            <p>Geo Analytics Platform - Analyze locations, generate isochrones, and make data-driven decisions</p>
         </div>
         
         <div class="tabs">
@@ -309,7 +385,7 @@
                     <ol style="margin-top: 10px; margin-left: 20px;">
                         <li>Upload a CSV file with columns: <code>WKT</code> (polygon coordinates) and <code>name</code> (polygon name)</li>
                         <li>Click "Analyze Polygons" to process</li>
-                        <li>Download the results CSV with additional analysis columns</li>
+                        <li>Preview the results and download the CSV with additional analysis columns</li>
                     </ol>
                 </div>
                 
@@ -346,7 +422,7 @@
                         <li>Enter origin coordinates (latitude, longitude)</li>
                         <li>Specify the polygon name and time limit (minutes)</li>
                         <li>Mapbox calculates the reachable area within the time limit</li>
-                        <li>Download the CSV file with WKT polygons ready for Google My Maps</li>
+                        <li>Preview and download the CSV file with WKT polygons ready for Google My Maps</li>
                     </ol>
                 </div>
                 
@@ -439,27 +515,120 @@
                     body: formData
                 });
                 
+                const data = await response.json();
+                
                 if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'polygon_analysis_results.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
+                    // Display results
+                    const resultsDiv = document.getElementById('metrics-results');
                     
-                    showAlert('metrics-alert', '✅ Analysis complete! File downloaded.', 'success');
+                    // Build table HTML
+                    let tableHTML = '<h3>📊 Analysis Results</h3>';
+                    
+                    // Summary statistics with green theme
+                    if (data.summary) {
+                        const s = data.summary;
+                        tableHTML += `
+                            <div style="margin-bottom: 25px;">
+                                <h4 style="margin-bottom: 15px; color: #1f2937; font-size: 1.2em;">📈 Summary Statistics</h4>
+                                <div class="summary-grid">
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total Polygons</div>
+                                        <div class="summary-card-value">${s.total_polygons}</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total Eateries</div>
+                                        <div class="summary-card-value">${s.total_eateries}</div>
+                                        <div class="summary-card-avg">Avg: ${s.avg_eateries.toFixed(1)} per polygon</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total Offices</div>
+                                        <div class="summary-card-value">${s.total_offices}</div>
+                                        <div class="summary-card-avg">Avg: ${s.avg_offices.toFixed(1)} per polygon</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total Apartments</div>
+                                        <div class="summary-card-value">${s.total_apartments}</div>
+                                        <div class="summary-card-avg">Avg: ${s.avg_apartments.toFixed(1)} per polygon</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total PGs</div>
+                                        <div class="summary-card-value">${s.total_pgs}</div>
+                                        <div class="summary-card-avg">Avg: ${s.avg_pgs.toFixed(1)} per polygon</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total Gyms</div>
+                                        <div class="summary-card-value">${s.total_gyms}</div>
+                                        <div class="summary-card-avg">Avg: ${s.avg_gyms.toFixed(1)} per polygon</div>
+                                    </div>
+                                    <div class="summary-card">
+                                        <div class="summary-card-label">Total Salons</div>
+                                        <div class="summary-card-value">${s.total_salons}</div>
+                                        <div class="summary-card-avg">Avg: ${s.avg_salons.toFixed(1)} per polygon</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Create table
+                    if (data.data && data.data.length > 0) {
+                        tableHTML += '<div style="overflow-x: auto;"><table class="results-table">';
+                        
+                        // Table header
+                        const headers = Object.keys(data.data[0]);
+                        tableHTML += '<thead><tr>';
+                        headers.forEach(header => {
+                            tableHTML += `<th>${header}</th>`;
+                        });
+                        tableHTML += '</tr></thead>';
+                        
+                        // Table body
+                        tableHTML += '<tbody>';
+                        data.data.forEach(row => {
+                            tableHTML += '<tr>';
+                            headers.forEach(header => {
+                                let value = row[header];
+                                // Truncate WKT if too long
+                                if (header === 'WKT' && value && value.length > 100) {
+                                    value = value.substring(0, 100) + '...';
+                                }
+                                tableHTML += `<td>${value || ''}</td>`;
+                            });
+                            tableHTML += '</tr>';
+                        });
+                        tableHTML += '</tbody></table></div>';
+                    }
+                    
+                    // Download button - store CSV in data attribute to avoid escaping issues
+                    const csvData = btoa(unescape(encodeURIComponent(data.csv)));
+                    tableHTML += `<button class="btn download-btn" onclick="downloadMetricsCSV('${csvData}')">📥 Download Results CSV</button>`;
+                    
+                    resultsDiv.innerHTML = tableHTML;
+                    resultsDiv.classList.add('active');
+                    
+                    showAlert('metrics-alert', '✅ Analysis complete!', 'success');
                 } else {
-                    const error = await response.json();
-                    showAlert('metrics-alert', `❌ Error: ${error.error || 'Analysis failed'}`, 'error');
+                    showAlert('metrics-alert', `❌ Error: ${data.error || 'Analysis failed'}`, 'error');
                 }
             } catch (error) {
                 showAlert('metrics-alert', `❌ Error: ${error.message}`, 'error');
             } finally {
                 document.getElementById('metrics-loading').style.display = 'none';
             }
+        }
+        
+        function downloadMetricsCSV(base64Content) {
+            // Decode base64 content
+            const csvContent = decodeURIComponent(escape(atob(base64Content)));
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conquest_analysis_results.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
         }
         
         async function generateIsochrone() {
@@ -528,11 +697,12 @@
                 if (response.ok) {
                     // Display results
                     const resultsDiv = document.getElementById('mapping-results');
+                    const csvData = btoa(unescape(encodeURIComponent(data.csv)));
                     resultsDiv.innerHTML = `
                         <h3>📊 Generated Polygon</h3>
                         <p><strong>Name:</strong> ${data.polygon_name}</p>
-                        <p><strong>WKT:</strong> <code style="word-break: break-all;">${data.wkt.substring(0, 200)}...</code></p>
-                        <button class="btn download-btn" onclick="downloadIsochroneCSV('${data.csv.replace(/'/g, "\\'")}')">📥 Download CSV</button>
+                        <p><strong>WKT:</strong> <code style="word-break: break-all; background: #f0fdf4; padding: 8px; border-radius: 4px; display: block; margin-top: 8px;">${data.wkt.substring(0, 200)}...</code></p>
+                        <button class="btn download-btn" onclick="downloadIsochroneCSV('${csvData}')">📥 Download CSV</button>
                     `;
                     resultsDiv.classList.add('active');
                     
@@ -547,12 +717,14 @@
             }
         }
         
-        function downloadIsochroneCSV(csvContent) {
+        function downloadIsochroneCSV(base64Content) {
+            // Decode base64 content
+            const csvContent = decodeURIComponent(escape(atob(base64Content)));
             const blob = new Blob([csvContent], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'isochrone_polygon.csv';
+            a.download = 'conquest_isochrone_polygon.csv';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

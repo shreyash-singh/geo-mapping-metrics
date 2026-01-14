@@ -1152,16 +1152,18 @@ class PolygonAnalyzer:
         # Try the specified mode (fallback is handled by _get_travel_time_seconds_with_fallback)
         mode = travel_mode
         # Build payload with enhanced traffic-aware routing
-        # Use current time for traffic-aware routing to consider real-time conditions
+        # Use 6 PM (18:00) for traffic-aware routing to consider evening rush hour conditions
         now = datetime.datetime.now(datetime.timezone.utc)
+        # Set time to 6 PM (18:00) while keeping today's date
+        traffic_time = now.replace(hour=18, minute=0, second=0, microsecond=0)
         
         payload = {
             "origin": {"location": {"latLng": {"latitude": float(origin[0]), "longitude": float(origin[1])}}},
             "destination": {"location": {"latLng": {"latitude": float(destination[0]), "longitude": float(destination[1])}}},
             "travelMode": mode,
             "routingPreference": "TRAFFIC_AWARE",
-            "trafficModel": "BEST_GUESS",  # Uses current traffic conditions
-            "departureTime": now.strftime("%Y-%m-%dT%H:%M:%SZ")  # Current time for traffic consideration
+            "trafficModel": "BEST_GUESS",  # Uses traffic conditions at 6 PM
+            "departureTime": traffic_time.strftime("%Y-%m-%dT%H:%M:%SZ")  # 6 PM for traffic consideration
         }
 
         try:
