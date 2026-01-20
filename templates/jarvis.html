@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis - Personal Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            color: #333;
+            line-height: 1.6;
+            transition: margin-left 0.3s;
+        }
+        
+        /* Header with Hamburger Menu */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .hamburger {
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-right: 15px;
+            transition: transform 0.3s;
+        }
+        
+        .hamburger:hover {
+            opacity: 0.7;
+        }
+        
+        .hamburger span {
+            width: 24px;
+            height: 3px;
+            background: #333;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+        
+        .header-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: -300px;
+            top: 60px;
+            width: 300px;
+            height: calc(100vh - 60px);
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            transition: left 0.3s;
+            z-index: 999;
+            overflow-y: auto;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar.open {
+            left: 0;
+        }
+        
+        .sidebar-item {
+            padding: 16px 24px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            font-weight: 500;
+        }
+        
+        .sidebar-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .sidebar-item.active {
+            background: #f0f0f0;
+            border-left: 4px solid #333;
+        }
+        
+        /* Main Content */
+        .main-content {
+            margin-top: 60px;
+            padding: 40px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Homepage */
+        .homepage {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        
+        .homepage h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+        
+        .homepage .subtitle {
+            font-size: 1.3em;
+            color: #666;
+            margin-bottom: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .homepage .description {
+            font-size: 1.1em;
+            color: #555;
+            line-height: 1.8;
+            max-width: 800px;
+            margin: 0 auto 40px;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+            text-align: left;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.3em;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+        
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Meal Planner Styles */
+        .meal-planner {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
+        }
+        
+        .meal-planner h2 {
+            margin-bottom: 30px;
+            color: #1a1a1a;
+            font-size: 2em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #333;
+        }
+        
+        .btn {
+            background: #1a1a1a;
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: #333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #333;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Meal Plan Results */
+        .meal-plan-results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .meal-plan-results.active {
+            display: block;
+        }
+        
+        .day-card {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .day-header {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+        
+        .meal-item {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #333;
+        }
+        
+        .meal-item h4 {
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .meal-item p {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        /* Overlay for mobile */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 998;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+            
+            .homepage h1 {
+                font-size: 2.5em;
+            }
+            
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="hamburger" id="hamburger" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="header-title">Jarvis</div>
+    </div>
+    
+    <!-- Overlay for mobile -->
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-item active" onclick="switchTab('home')">🏠 Home</div>
+        <div class="sidebar-item" onclick="switchTab('meal-planner')">🍽️ Meal Planner</div>
+        <!-- Add more tabs here as needed -->
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Homepage Tab -->
+        <div id="home" class="tab-content active">
+            <div class="homepage">
+                <h1>Jarvis</h1>
+                <p class="subtitle">Your Personal Agent</p>
+                <p class="description">
+                    Welcome! I'm Jarvis, your personal assistant designed to help Shreyash with various tasks and make daily life more organized and efficient. 
+                    From meal planning to productivity tools, I'm here to assist you with whatever you need.
+                </p>
+                
+                <div class="features">
+                    <div class="feature-card">
+                        <h3>🍽️ Meal Planner</h3>
+                        <p>Automatically fetch meals from your Google Sheets and generate personalized meal combinations for breakfast, lunch, and dinner.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>⚡ Quick & Easy</h3>
+                        <p>Simple, intuitive interface that gets things done without unnecessary complexity.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔄 Always Updated</h3>
+                        <p>Connect to your Google Sheets for real-time meal data that stays in sync with your preferences.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Meal Planner Tab -->
+        <div id="meal-planner" class="tab-content">
+            <div class="meal-planner">
+                <h2>🍽️ Meal Planner</h2>
+                
+                <div class="alert alert-info">
+                    <strong>How it works:</strong> Connect your Google Sheets meal database and I'll generate personalized meal combinations. 
+                    Make sure your Google Sheet is published to the web as CSV format.
+                </div>
+                
+                <div class="form-group">
+                    <label for="sheet-url">Google Sheets CSV URL</label>
+                    <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv&gid=0">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        To get this URL: Open your Google Sheet → File → Share → Publish to web → Select CSV format → Copy the link
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="days">Number of Days</label>
+                    <input type="number" id="days" min="1" max="30" value="7">
+                </div>
+                
+                <div id="meal-alert"></div>
+                
+                <div class="loading" id="meal-loading">
+                    <div class="spinner"></div>
+                    <p>Processing your meal plan...</p>
+                </div>
+                
+                <button class="btn" onclick="generateMealPlan()" style="width: 100%;">Generate Meal Plan</button>
+                
+                <div id="meal-plan-results" class="meal-plan-results"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const hamburger = document.getElementById('hamburger');
+            const overlay = document.getElementById('overlay');
+            
+            sidebar.classList.toggle('open');
+            hamburger.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+        
+        // Tab switching
+        function switchTab(tabName) {
+            // Update sidebar items
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            // Close sidebar on mobile after selection
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+            
+            // Clear alerts
+            document.getElementById('meal-alert').innerHTML = '';
+        }
+        
+        // Show alert
+        function showAlert(message, type) {
+            const container = document.getElementById('meal-alert');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+        
+        // Generate meal plan
+        async function generateMealPlan() {
+            const sheetUrl = document.getElementById('sheet-url').value.trim();
+            const days = parseInt(document.getElementById('days').value) || 7;
+            
+            if (!sheetUrl) {
+                showAlert('⚠️ Please enter your Google Sheets CSV URL', 'error');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('meal-loading').style.display = 'block';
+            document.getElementById('meal-plan-results').classList.remove('active');
+            showAlert('', '');
+            
+            try {
+                // First, fetch meals from Google Sheets
+                const fetchResponse = await fetch(`/api/meals/fetch?sheet_url=${encodeURIComponent(sheetUrl)}`);
+                const fetchData = await fetchResponse.json();
+                
+                if (!fetchResponse.ok) {
+                    showAlert(`❌ Error: ${fetchData.error}`, 'error');
+                    document.getElementById('meal-loading').style.display = 'none';
+                    return;
+                }
+                
+                if (!fetchData.meals || fetchData.meals.length === 0) {
+                    showAlert('⚠️ No meals found in the sheet. Please check your data.', 'error');
+                    document.getElementById('meal-loading').style.display = 'none';
+                    return;
+                }
+                
+                // Then generate meal plan
+                const generateResponse = await fetch('/api/meals/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        meals: fetchData.meals,
+                        days: days,
+                        preferences: {}
+                    })
+                });
+                
+                const generateData = await generateResponse.json();
+                
+                if (!generateResponse.ok) {
+                    showAlert(`❌ Error: ${generateData.error}`, 'error');
+                    document.getElementById('meal-loading').style.display = 'none';
+                    return;
+                }
+                
+                // Display results
+                displayMealPlan(generateData.plan, generateData.summary);
+                showAlert(`✅ Generated meal plan for ${days} days!`, 'success');
+                
+            } catch (error) {
+                showAlert(`❌ Error: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('meal-loading').style.display = 'none';
+            }
+        }
+        
+        // Display meal plan
+        function displayMealPlan(plan, summary) {
+            const resultsDiv = document.getElementById('meal-plan-results');
+            
+            let html = '<h3 style="margin-bottom: 20px; color: #1a1a1a;">Your Meal Plan</h3>';
+            
+            plan.forEach(day => {
+                html += `
+                    <div class="day-card">
+                        <div class="day-header">Day ${day.day} - ${day.day_name}, ${day.date}</div>
+                        ${day.breakfast ? `
+                            <div class="meal-item">
+                                <h4>🍳 Breakfast</h4>
+                                <p><strong>${day.breakfast.name || 'Meal'}</strong></p>
+                                ${day.breakfast.ingredients ? `<p>${day.breakfast.ingredients}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        ${day.lunch ? `
+                            <div class="meal-item">
+                                <h4>🍱 Lunch</h4>
+                                <p><strong>${day.lunch.name || 'Meal'}</strong></p>
+                                ${day.lunch.ingredients ? `<p>${day.lunch.ingredients}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        ${day.dinner ? `
+                            <div class="meal-item">
+                                <h4>🍽️ Dinner</h4>
+                                <p><strong>${day.dinner.name || 'Meal'}</strong></p>
+                                ${day.dinner.ingredients ? `<p>${day.dinner.ingredients}</p>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            if (summary) {
+                html += `
+                    <div style="background: #f0f0f0; padding: 16px; border-radius: 8px; margin-top: 20px;">
+                        <strong>Summary:</strong> ${summary.breakfast_options} breakfast options, 
+                        ${summary.lunch_options} lunch options, 
+                        ${summary.dinner_options} dinner options
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('active');
+        }
+    </script>
+</body>
+</html>

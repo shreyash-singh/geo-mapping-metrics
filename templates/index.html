@@ -510,12 +510,41 @@
             showAlert('metrics-alert', '', '');
             
             try {
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
+                // Create AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
                 
-                const data = await response.json();
+                let response;
+                try {
+                    response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    if (fetchError.name === 'AbortError') {
+                        showAlert('metrics-alert', '❌ Request timed out. The analysis is taking too long. Please try with a smaller CSV file.', 'error');
+                    } else if (fetchError.message.includes('Failed to fetch')) {
+                        showAlert('metrics-alert', '❌ Failed to connect to server. Please make sure the server is running on http://localhost:5000', 'error');
+                    } else {
+                        showAlert('metrics-alert', `❌ Network error: ${fetchError.message}`, 'error');
+                    }
+                    document.getElementById('metrics-loading').style.display = 'none';
+                    return;
+                }
+                
+                // Check if response is JSON before parsing
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    // If not JSON, get text and create error object
+                    const text = await response.text();
+                    data = { error: text || 'An error occurred' };
+                }
                 
                 if (response.ok) {
                     // Display results
@@ -611,7 +640,18 @@
                     showAlert('metrics-alert', `❌ Error: ${data.error || 'Analysis failed'}`, 'error');
                 }
             } catch (error) {
-                showAlert('metrics-alert', `❌ Error: ${error.message}`, 'error');
+                // Handle different types of errors
+                let errorMessage = 'An unknown error occurred';
+                
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    errorMessage = 'Failed to connect to server. Please check:\n1. Server is running (python3 app.py)\n2. Server is accessible at http://localhost:5000\n3. No firewall is blocking the connection';
+                } else if (error.name === 'AbortError') {
+                    errorMessage = 'Request timed out. The analysis is taking too long.';
+                } else {
+                    errorMessage = error.message || 'An error occurred';
+                }
+                
+                showAlert('metrics-alert', `❌ Error: ${errorMessage}`, 'error');
             } finally {
                 document.getElementById('metrics-loading').style.display = 'none';
             }
@@ -668,6 +708,22 @@
                 return;
             }
             
+            // For driving-traffic profile, set depart_at to current time (or 6 PM today)
+            // Mapbox requires depart_at parameter for traffic-aware routing
+            let departAt = null;
+            if (routingProfile === 'driving-traffic') {
+                const now = new Date();
+                // Set to 6 PM (18:00) today for traffic consideration
+                const trafficTime = new Date(now);
+                trafficTime.setHours(18, 0, 0, 0);
+                // If current time is past 6 PM, use tomorrow at 6 PM
+                if (now.getHours() >= 18) {
+                    trafficTime.setDate(trafficTime.getDate() + 1);
+                }
+                // Format as ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)
+                departAt = trafficTime.toISOString().split('.')[0] + 'Z';
+            }
+            
             const requestData = {
                 center_lat: centerLat,
                 center_lng: centerLng,
@@ -677,6 +733,11 @@
                 routing_profile: routingProfile,
                 generalize_meters: 0.0
             };
+            
+            // Add depart_at if using driving-traffic profile
+            if (departAt) {
+                requestData.depart_at = departAt;
+            }
             
             // Show loading
             document.getElementById('mapping-loading').style.display = 'block';
@@ -692,7 +753,16 @@
                     body: JSON.stringify(requestData)
                 });
                 
-                const data = await response.json();
+                // Check if response is JSON before parsing
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    // If not JSON, get text and create error object
+                    const text = await response.text();
+                    data = { error: text || 'An error occurred' };
+                }
                 
                 if (response.ok) {
                     // Display results

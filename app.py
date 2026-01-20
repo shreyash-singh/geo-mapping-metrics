@@ -91,11 +91,50 @@ def analyze_polygons():
         except Exception as e:
             return jsonify({"error": f"Error reading CSV file: {str(e)}"}), 400
         
-        # Validate required columns
-        if 'WKT' not in df.columns:
-            return jsonify({"error": "CSV file must contain a 'WKT' column"}), 400
-        if 'name' not in df.columns:
-            return jsonify({"error": "CSV file must contain a 'name' column"}), 400
+        # Check if CSV is empty
+        if df.empty:
+            return jsonify({"error": "CSV file is empty. Please provide a CSV file with at least one row of data."}), 400
+        
+        # Normalize column names (strip whitespace, handle case variations)
+        df.columns = df.columns.str.strip()
+        
+        # Check for required columns (case-insensitive)
+        wkt_col = None
+        name_col = None
+        
+        for col in df.columns:
+            col_lower = col.lower()
+            if col_lower == 'wkt':
+                wkt_col = col
+            elif col_lower == 'name':
+                name_col = col
+        
+        if not wkt_col:
+            return jsonify({
+                "error": "CSV file must contain a 'WKT' column (case-insensitive)",
+                "available_columns": list(df.columns),
+                "hint": "Your CSV should have columns: 'WKT' and 'name'"
+            }), 400
+        
+        if not name_col:
+            return jsonify({
+                "error": "CSV file must contain a 'name' column (case-insensitive)",
+                "available_columns": list(df.columns),
+                "hint": "Your CSV should have columns: 'WKT' and 'name'"
+            }), 400
+        
+        # Rename columns to standardize
+        if wkt_col != 'WKT':
+            df = df.rename(columns={wkt_col: 'WKT'})
+        if name_col != 'name':
+            df = df.rename(columns={name_col: 'name'})
+        
+        # Validate that WKT and name columns have data
+        if df['WKT'].isna().all() or df['WKT'].eq('').all():
+            return jsonify({"error": "WKT column is empty. Please provide WKT polygon data."}), 400
+        
+        if df['name'].isna().all() or df['name'].eq('').all():
+            return jsonify({"error": "name column is empty. Please provide polygon names."}), 400
         
         # Initialize analyzer and process
         analyzer = PolygonAnalyzer(api_key)
@@ -113,26 +152,33 @@ def analyze_polygons():
             csv_buffer = io.StringIO()
             results_df.to_csv(csv_buffer, index=False)
             csv_data = csv_buffer.getvalue()
-            
+                    
             # Convert DataFrame to list of dictionaries for JSON response
             results_data = results_df.to_dict('records')
             
-            # Calculate summary statistics
-            summary = {
-                "total_polygons": len(results_df),
-                "total_eateries": int(results_df['no. of eateries'].sum()),
-                "total_offices": int(results_df['no. of offices'].sum()),
-                "total_apartments": int(results_df['no. of apartments'].sum()),
-                "total_pgs": int(results_df['no. of PGs'].sum()),
-                "total_gyms": int(results_df['no. of gyms'].sum()),
-                "total_salons": int(results_df['no. of salons'].sum()),
-                "avg_eateries": float(results_df['no. of eateries'].mean()),
-                "avg_offices": float(results_df['no. of offices'].mean()),
-                "avg_apartments": float(results_df['no. of apartments'].mean()),
-                "avg_pgs": float(results_df['no. of PGs'].mean()),
-                "avg_gyms": float(results_df['no. of gyms'].mean()),
-                "avg_salons": float(results_df['no. of salons'].mean())
-            }
+            # Calculate summary statistics (with error handling for missing columns)
+            try:
+                summary = {
+                    "total_polygons": len(results_df),
+                    "total_eateries": int(results_df['no. of eateries'].sum()) if 'no. of eateries' in results_df.columns else 0,
+                    "total_offices": int(results_df['no. of offices'].sum()) if 'no. of offices' in results_df.columns else 0,
+                    "total_apartments": int(results_df['no. of apartments'].sum()) if 'no. of apartments' in results_df.columns else 0,
+                    "total_pgs": int(results_df['no. of PGs'].sum()) if 'no. of PGs' in results_df.columns else 0,
+                    "total_gyms": int(results_df['no. of gyms'].sum()) if 'no. of gyms' in results_df.columns else 0,
+                    "total_salons": int(results_df['no. of salons'].sum()) if 'no. of salons' in results_df.columns else 0,
+                    "avg_eateries": float(results_df['no. of eateries'].mean()) if 'no. of eateries' in results_df.columns else 0.0,
+                    "avg_offices": float(results_df['no. of offices'].mean()) if 'no. of offices' in results_df.columns else 0.0,
+                    "avg_apartments": float(results_df['no. of apartments'].mean()) if 'no. of apartments' in results_df.columns else 0.0,
+                    "avg_pgs": float(results_df['no. of PGs'].mean()) if 'no. of PGs' in results_df.columns else 0.0,
+                    "avg_gyms": float(results_df['no. of gyms'].mean()) if 'no. of gyms' in results_df.columns else 0.0,
+                    "avg_salons": float(results_df['no. of salons'].mean()) if 'no. of salons' in results_df.columns else 0.0
+                }
+            except Exception as summary_error:
+                # If summary calculation fails, return basic summary
+                summary = {
+                    "total_polygons": len(results_df),
+                    "error": f"Summary calculation failed: {str(summary_error)}"
+                }
             
             return jsonify({
                 "data": results_data,
@@ -204,6 +250,18 @@ def generate_isochrone():
         generalize_meters = float(data.get('generalize_meters', 0.0))
         depart_at = data.get('depart_at')  # ISO 8601 format string
         
+        # For driving-traffic profile, depart_at is required for traffic-aware routing
+        # If not provided, default to current time (or 6 PM today for rush hour consideration)
+        if routing_profile == 'driving-traffic' and not depart_at:
+            import datetime
+            now = datetime.datetime.now(datetime.timezone.utc)
+            # Set to 6 PM (18:00) today for traffic consideration, or use current time
+            traffic_time = now.replace(hour=18, minute=0, second=0, microsecond=0)
+            # If current time is past 6 PM, use tomorrow at 6 PM
+            if now.hour >= 18:
+                traffic_time = traffic_time + datetime.timedelta(days=1)
+            depart_at = traffic_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        
         # Initialize analyzer without API key (not needed for isochrone generation)
         # Isochrone generation only uses Mapbox API, not Google Maps
         analyzer = PolygonAnalyzer()
@@ -223,6 +281,7 @@ def generate_isochrone():
             return jsonify({"error": "Failed to generate isochrone polygon"}), 500
         
         # Create CSV DataFrame
+        # Create CSV DataFrame
         df_output = pd.DataFrame([{
             "WKT": wkt_string,
             "name": polygon_name
@@ -232,7 +291,6 @@ def generate_isochrone():
         csv_buffer = io.StringIO()
         df_output.to_csv(csv_buffer, index=False)
         csv_data = csv_buffer.getvalue()
-                    
         return jsonify({
             "wkt": wkt_string,
             "polygon_name": polygon_name,
@@ -246,4 +304,4 @@ def generate_isochrone():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True, threaded=True)
