@@ -394,6 +394,16 @@
                     <input type="file" id="csv-file" accept=".csv">
                 </div>
                 
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="detailed-description" style="width: auto; margin-right: 10px;">
+                        <label for="detailed-description" style="margin-bottom: 0; font-weight: 500;">📋 Include Detailed Description</label>
+                    </div>
+                    <small style="display: block; margin-top: 5px; color: #6b7280; margin-left: 28px;">
+                        When checked, download will be an Excel file with separate sheets for offices, apartments, gyms, PGs, and salons with detailed information (name, Google Maps link, lat/long) for each place.
+                    </small>
+                </div>
+                
                 <div id="metrics-alert"></div>
                 
                 <div class="loading" id="metrics-loading">
@@ -503,6 +513,10 @@
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
             formData.append('google_maps_api_key', apiKey);
+            
+            // Add detailed description flag if checkbox is checked
+            const detailedDescription = document.getElementById('detailed-description').checked;
+            formData.append('detailed_description', detailedDescription ? 'true' : 'false');
             
             // Show loading
             document.getElementById('metrics-loading').style.display = 'block';
@@ -628,9 +642,17 @@
                         tableHTML += '</tbody></table></div>';
                     }
                     
-                    // Download button - store CSV in data attribute to avoid escaping issues
-                    const csvData = btoa(unescape(encodeURIComponent(data.csv)));
-                    tableHTML += `<button class="btn download-btn" onclick="downloadMetricsCSV('${csvData}')">📥 Download Results CSV</button>`;
+                    // Download button - handle both CSV and Excel
+                    const detailedDescription = document.getElementById('detailed-description').checked;
+                    if (detailedDescription && data.excel) {
+                        // Excel file download
+                        const excelData = data.excel;
+                        tableHTML += `<button class="btn download-btn" onclick="downloadMetricsExcel('${excelData}')">📥 Download Results Excel</button>`;
+                    } else if (data.csv) {
+                        // CSV file download
+                        const csvData = btoa(unescape(encodeURIComponent(data.csv)));
+                        tableHTML += `<button class="btn download-btn" onclick="downloadMetricsCSV('${csvData}')">📥 Download Results CSV</button>`;
+                    }
                     
                     resultsDiv.innerHTML = tableHTML;
                     resultsDiv.classList.add('active');
@@ -665,6 +687,24 @@
             const a = document.createElement('a');
             a.href = url;
             a.download = 'conquest_analysis_results.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+        
+        function downloadMetricsExcel(base64Content) {
+            // Decode base64 content for Excel file
+            const binaryString = atob(base64Content);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conquest_analysis_results.xlsx';
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

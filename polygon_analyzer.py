@@ -821,6 +821,255 @@ class PolygonAnalyzer:
         
         return len(unique_salons)
     
+    def _get_google_maps_link(self, lat: float, lng: float, place_id: str = None) -> str:
+        """
+        Generate Google Maps link for a place
+        
+        Args:
+            lat: Latitude
+            lng: Longitude
+            place_id: Optional place_id (preferred if available)
+            
+        Returns:
+            Google Maps URL
+        """
+        if place_id:
+            return f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+        else:
+            return f"https://www.google.com/maps/?q={lat},{lng}"
+    
+    def _extract_place_details(self, place: dict, polygon_name: str) -> dict:
+        """
+        Extract place details from Google Maps place object
+        
+        Args:
+            place: Google Maps place object
+            polygon_name: Name of the polygon this place belongs to
+            
+        Returns:
+            Dictionary with place details
+        """
+        location = place.get('geometry', {}).get('location', {})
+        lat = location.get('lat', 0.0)
+        lng = location.get('lng', 0.0)
+        name = place.get('name', 'Unknown')
+        place_id = place.get('place_id', '')
+        
+        return {
+            'polygon_name': polygon_name,
+            'name': name,
+            'latitude': lat,
+            'longitude': lng,
+            'google_maps_link': self._get_google_maps_link(lat, lng, place_id)
+        }
+    
+    def get_offices_details(self, polygon: List[Tuple[float, float]], polygon_name: str) -> List[dict]:
+        """
+        Get detailed information about offices in polygon
+        
+        Args:
+            polygon: List of (lat, lng) tuples
+            polygon_name: Name of the polygon
+            
+        Returns:
+            List of dictionaries with office details
+        """
+        bounds = self.get_polygon_bounds(polygon)
+        offices = []
+        
+        # Use the same search logic as count_offices
+        office_places = self.search_places_in_bounds(
+            bounds,
+            place_types=['establishment', 'point_of_interest'],
+            max_results=60
+        )
+        
+        keyword_searches = [
+            'corporate office', 'company', 'technical company', 'insurance company',
+            'co-working space', 'coworking space', 'software company', 'co-working', 'coworking'
+        ]
+        for keyword in keyword_searches:
+            keyword_places = self.search_places_in_bounds(bounds, keyword=keyword, max_results=60)
+            office_places.extend(keyword_places)
+        
+        # Filter and extract details
+        seen_ids = set()
+        for place in office_places:
+            location = place.get('geometry', {}).get('location', {})
+            if location:
+                point = (location.get('lat'), location.get('lng'))
+                if self.point_in_polygon(point, polygon):
+                    place_name = place.get('name', '').lower()
+                    place_types = [t.lower() for t in place.get('types', [])]
+                    
+                    # Same office detection logic as count_offices
+                    is_office = False
+                    office_keywords = [
+                        'corporate office', 'company', 'technical company', 'insurance company',
+                        'co-working space', 'coworking space', 'software company', 'co-working',
+                        'coworking', 'corporate', 'ltd', 'inc', 'corporation', 'pvt', 'limited',
+                        'pvt ltd', 'private limited'
+                    ]
+                    if any(kw in place_name for kw in office_keywords) or place_name.endswith('company') or 'software' in place_name:
+                        is_office = True
+                    
+                    excluded_types = ['restaurant', 'cafe', 'food', 'store', 'shopping_mall',
+                                     'hospital', 'school', 'university', 'park', 'church', 'mosque',
+                                     'temple', 'gas_station', 'atm', 'bank', 'lodging']
+                    excluded_keywords = ['restaurant', 'cafe', 'hotel', 'resort', 'mall', 'store']
+                    
+                    if any(t in place_types for t in excluded_types) or any(kw in place_name for kw in excluded_keywords):
+                        is_office = False
+                    
+                    place_id = place.get('place_id')
+                    if is_office and place_id not in seen_ids:
+                        seen_ids.add(place_id)
+                        offices.append(self._extract_place_details(place, polygon_name))
+        
+        return offices
+    
+    def get_apartments_details(self, polygon: List[Tuple[float, float]], polygon_name: str) -> List[dict]:
+        """Get detailed information about apartments in polygon"""
+        bounds = self.get_polygon_bounds(polygon)
+        apartments = []
+        
+        apartment_places = self.search_places_in_bounds(
+            bounds, place_types=['lodging'], max_results=60
+        )
+        
+        keyword_searches = [
+            'apartment', 'apartments', 'apartment building', 'apartment complex',
+            'residency', 'residential building', 'residential', 'complex', 'residence'
+        ]
+        for keyword in keyword_searches:
+            keyword_places = self.search_places_in_bounds(bounds, keyword=keyword, max_results=60)
+            apartment_places.extend(keyword_places)
+        
+        seen_ids = set()
+        for place in apartment_places:
+            location = place.get('geometry', {}).get('location', {})
+            if location:
+                point = (location.get('lat'), location.get('lng'))
+                if self.point_in_polygon(point, polygon):
+                    place_name = place.get('name', '').lower()
+                    place_types = [t.lower() for t in place.get('types', [])]
+                    
+                    is_apartment = any(t in ['lodging', 'establishment'] for t in place_types) or \
+                                 any(kw in place_name for kw in ['apartment', 'apartments', 'residency',
+                                                                 'residential', 'complex', 'residence'])
+                    
+                    excluded_keywords = ['hotel', 'resort', 'hostel', 'pg', 'guest house']
+                    if not any(ekw in place_name for ekw in excluded_keywords):
+                        place_id = place.get('place_id')
+                        if is_apartment and place_id not in seen_ids:
+                            seen_ids.add(place_id)
+                            apartments.append(self._extract_place_details(place, polygon_name))
+        
+        return apartments
+    
+    def get_gyms_details(self, polygon: List[Tuple[float, float]], polygon_name: str) -> List[dict]:
+        """Get detailed information about gyms in polygon"""
+        bounds = self.get_polygon_bounds(polygon)
+        gyms = []
+        
+        gym_places = self.search_places_in_bounds(
+            bounds, place_types=['gym'], max_results=60
+        )
+        
+        keyword_searches = ['gym', 'fitness', 'fitness center', 'fitness centre', 'workout']
+        for keyword in keyword_searches:
+            keyword_places = self.search_places_in_bounds(bounds, keyword=keyword, max_results=60)
+            gym_places.extend(keyword_places)
+        
+        seen_ids = set()
+        for place in gym_places:
+            location = place.get('geometry', {}).get('location', {})
+            if location:
+                point = (location.get('lat'), location.get('lng'))
+                if self.point_in_polygon(point, polygon):
+                    place_name = place.get('name', '').lower()
+                    place_types = [t.lower() for t in place.get('types', [])]
+                    
+                    is_gym = 'gym' in place_types or any(kw in place_name for kw in ['gym', 'fitness', 'workout'])
+                    if not any(ekw in place_name for ekw in ['yoga', 'dance', 'martial']):
+                        place_id = place.get('place_id')
+                        if is_gym and place_id not in seen_ids:
+                            seen_ids.add(place_id)
+                            gyms.append(self._extract_place_details(place, polygon_name))
+        
+        return gyms
+    
+    def get_pgs_details(self, polygon: List[Tuple[float, float]], polygon_name: str) -> List[dict]:
+        """Get detailed information about PGs in polygon"""
+        bounds = self.get_polygon_bounds(polygon)
+        pgs = []
+        
+        pg_places = self.search_places_in_bounds(
+            bounds, place_types=['lodging'], max_results=60
+        )
+        
+        keyword_searches = ['pg', 'paying guest', 'paying guests', 'hostel', 'guest house']
+        for keyword in keyword_searches:
+            keyword_places = self.search_places_in_bounds(bounds, keyword=keyword, max_results=60)
+            pg_places.extend(keyword_places)
+        
+        seen_ids = set()
+        for place in pg_places:
+            location = place.get('geometry', {}).get('location', {})
+            if location:
+                point = (location.get('lat'), location.get('lng'))
+                if self.point_in_polygon(point, polygon):
+                    place_name = place.get('name', '').lower()
+                    place_types = [t.lower() for t in place.get('types', [])]
+                    
+                    is_pg = any(kw in place_name for kw in ['pg', 'paying guest', 'hostel', 'guest house'])
+                    if 'lodging' in place_types or is_pg:
+                        place_id = place.get('place_id')
+                        if place_id not in seen_ids:
+                            seen_ids.add(place_id)
+                            pgs.append(self._extract_place_details(place, polygon_name))
+        
+        return pgs
+    
+    def get_salons_details(self, polygon: List[Tuple[float, float]], polygon_name: str) -> List[dict]:
+        """Get detailed information about salons in polygon"""
+        bounds = self.get_polygon_bounds(polygon)
+        salons = []
+        
+        salon_places = self.search_places_in_bounds(
+            bounds, place_types=['beauty_salon', 'hair_care'], max_results=60
+        )
+        
+        keyword_searches = [
+            'salon', 'beauty salon', 'hair salon', 'barber', 'barber shop',
+            'haircut', 'spa', 'beauty parlor', 'beauty parlour', 'hair care'
+        ]
+        for keyword in keyword_searches:
+            keyword_places = self.search_places_in_bounds(bounds, keyword=keyword, max_results=60)
+            salon_places.extend(keyword_places)
+        
+        seen_ids = set()
+        for place in salon_places:
+            location = place.get('geometry', {}).get('location', {})
+            if location:
+                point = (location.get('lat'), location.get('lng'))
+                if self.point_in_polygon(point, polygon):
+                    place_name = place.get('name', '').lower()
+                    place_types = [t.lower() for t in place.get('types', [])]
+                    
+                    is_salon = any(st in ['beauty_salon', 'hair_care', 'spa'] for st in place_types) or \
+                              any(kw in place_name for kw in ['salon', 'beauty salon', 'hair salon',
+                                                              'barber', 'haircut', 'spa', 'beauty parlor'])
+                    
+                    if not (any(ekw in place_name for ekw in ['nail']) and 
+                           not any(skw in place_name for skw in ['salon', 'hair', 'barber', 'beauty'])):
+                        place_id = place.get('place_id')
+                        if is_salon and place_id not in seen_ids:
+                            seen_ids.add(place_id)
+                            salons.append(self._extract_place_details(place, polygon_name))
+        
+        return salons
+    
     def generate_mapbox_isochrone(self,
                                   center_lat: float,
                                   center_lng: float,

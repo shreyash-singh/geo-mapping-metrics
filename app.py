@@ -9,6 +9,9 @@ import pandas as pd
 import io
 import os
 import tempfile
+import base64
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 app = Flask(__name__, template_folder='templates')
 CORS(app)  # Enable CORS for all routes
@@ -72,6 +75,9 @@ def analyze_polygons():
         api_key = request.form.get('google_maps_api_key') or os.environ.get('GOOGLE_MAPS_API_KEY', '')
         if not api_key:
             return jsonify({"error": "Google Maps API key is required"}), 400
+        
+        # Check if detailed description is requested
+        detailed_description = request.form.get('detailed_description', 'false').lower() == 'true'
         
         # Check if file is present
         if 'file' not in request.files:
@@ -148,51 +154,109 @@ def analyze_polygons():
             # Process CSV file
             results_df = analyzer.process_csv_file(tmp_input_path, output_csv_path=None)
             
-            # Convert to CSV string
-            csv_buffer = io.StringIO()
-            results_df.to_csv(csv_buffer, index=False)
-            csv_data = csv_buffer.getvalue()
-                    
             # Convert DataFrame to list of dictionaries for JSON response
             results_data = results_df.to_dict('records')
             
-            # Calculate summary statistics (with error handling for missing columns)
-            try:
-                summary = {
-                    "total_polygons": len(results_df),
-                    "total_eateries": int(results_df['no. of eateries'].sum()) if 'no. of eateries' in results_df.columns else 0,
-                    "total_offices": int(results_df['no. of offices'].sum()) if 'no. of offices' in results_df.columns else 0,
-                    "total_apartments": int(results_df['no. of apartments'].sum()) if 'no. of apartments' in results_df.columns else 0,
-                    "total_pgs": int(results_df['no. of PGs'].sum()) if 'no. of PGs' in results_df.columns else 0,
-                    "total_gyms": int(results_df['no. of gyms'].sum()) if 'no. of gyms' in results_df.columns else 0,
-                    "total_salons": int(results_df['no. of salons'].sum()) if 'no. of salons' in results_df.columns else 0,
-                    "avg_eateries": float(results_df['no. of eateries'].mean()) if 'no. of eateries' in results_df.columns else 0.0,
-                    "avg_offices": float(results_df['no. of offices'].mean()) if 'no. of offices' in results_df.columns else 0.0,
-                    "avg_apartments": float(results_df['no. of apartments'].mean()) if 'no. of apartments' in results_df.columns else 0.0,
-                    "avg_pgs": float(results_df['no. of PGs'].mean()) if 'no. of PGs' in results_df.columns else 0.0,
-                    "avg_gyms": float(results_df['no. of gyms'].mean()) if 'no. of gyms' in results_df.columns else 0.0,
-                    "avg_salons": float(results_df['no. of salons'].mean()) if 'no. of salons' in results_df.columns else 0.0
-                }
-            except Exception as summary_error:
-                # If summary calculation fails, return basic summary
-                summary = {
-                    "total_polygons": len(results_df),
-                    "error": f"Summary calculation failed: {str(summary_error)}"
-                }
+            # Calculate summary statistics
+            summary = {
+                "total_polygons": len(results_df),
+                "total_eateries": int(results_df['no. of eateries'].sum()) if 'no. of eateries' in results_df.columns else 0,
+                "total_offices": int(results_df['no. of offices'].sum()) if 'no. of offices' in results_df.columns else 0,
+                "total_apartments": int(results_df['no. of apartments'].sum()) if 'no. of apartments' in results_df.columns else 0,
+                "total_pgs": int(results_df['no. of PGs'].sum()) if 'no. of PGs' in results_df.columns else 0,
+                "total_gyms": int(results_df['no. of gyms'].sum()) if 'no. of gyms' in results_df.columns else 0,
+                "total_salons": int(results_df['no. of salons'].sum()) if 'no. of salons' in results_df.columns else 0,
+                "avg_eateries": float(results_df['no. of eateries'].mean()) if 'no. of eateries' in results_df.columns else 0.0,
+                "avg_offices": float(results_df['no. of offices'].mean()) if 'no. of offices' in results_df.columns else 0.0,
+                "avg_apartments": float(results_df['no. of apartments'].mean()) if 'no. of apartments' in results_df.columns else 0.0,
+                "avg_pgs": float(results_df['no. of PGs'].mean()) if 'no. of PGs' in results_df.columns else 0.0,
+                "avg_gyms": float(results_df['no. of gyms'].mean()) if 'no. of gyms' in results_df.columns else 0.0,
+                "avg_salons": float(results_df['no. of salons'].mean()) if 'no. of salons' in results_df.columns else 0.0
+            }
             
-            return jsonify({
+            response_data = {
                 "data": results_data,
-                "csv": csv_data,
                 "summary": summary
-            })
-        finally:
-            # Clean up temp file
+            }
+            
+            if detailed_description:
+                # Generate Excel file with multiple sheets
+                wb = Workbook()
+                wb.remove(wb.active)  # Remove default sheet
+                
+                # Master sheet with summary
+                ws_master = wb.create_sheet("Master")
+                for r in dataframe_to_rows(results_df, index=False, header=True):
+                    ws_master.append(r)
+                
+                # Get detailed place information for each polygon
+                from shapely import wkt as shapely_wkt
+                from shapely.geometry import Polygon as ShapelyPolygon
+                all_offices = []
+                all_apartments = []
+                all_gyms = []
+                all_pgs = []
+                all_salons = []
+                
+                for idx, row in df.iterrows():
+                    polygon_name = row['name']
+                    wkt_str = row['WKT']
+                    
+                    try:
+                        # Parse WKT to get polygon coordinates
+                        geom = shapely_wkt.loads(wkt_str)
+                        if geom.geom_type == 'Polygon':
+                            coords = list(geom.exterior.coords)
+                            # Convert to (lat, lng) format (WKT is lng, lat)
+                            polygon = [(lat, lng) for lng, lat in coords]
+                            
+                            # Get detailed information for each category
+                            all_offices.extend(analyzer.get_offices_details(polygon, polygon_name))
+                            all_apartments.extend(analyzer.get_apartments_details(polygon, polygon_name))
+                            all_gyms.extend(analyzer.get_gyms_details(polygon, polygon_name))
+                            all_pgs.extend(analyzer.get_pgs_details(polygon, polygon_name))
+                            all_salons.extend(analyzer.get_salons_details(polygon, polygon_name))
+                    except Exception as e:
+                        print(f"Error processing polygon {polygon_name}: {e}")
+                        continue
+                
+                # Create sheets for each category
+                categories = [
+                    ("Offices", all_offices),
+                    ("Apartments", all_apartments),
+                    ("Gyms", all_gyms),
+                    ("PGs", all_pgs),
+                    ("Salons", all_salons)
+                ]
+                
+                for sheet_name, data_list in categories:
+                    if data_list:
+                        ws = wb.create_sheet(sheet_name)
+                        df_detail = pd.DataFrame(data_list)
+                        for r in dataframe_to_rows(df_detail, index=False, header=True):
+                            ws.append(r)
+                
+                # Save Excel to bytes
+                excel_buffer = io.BytesIO()
+                wb.save(excel_buffer)
+                excel_buffer.seek(0)
+                excel_base64 = base64.b64encode(excel_buffer.getvalue()).decode('utf-8')
+                response_data["excel"] = excel_base64
+            else:
+                # Convert to CSV string
+                csv_buffer = io.StringIO()
+                results_df.to_csv(csv_buffer, index=False)
+                csv_data = csv_buffer.getvalue()
+                response_data["csv"] = csv_data
+            
+            return jsonify(response_data)
+                finally:
+                    # Clean up temp file
             if os.path.exists(tmp_input_path):
                 os.remove(tmp_input_path)
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 @app.route('/api/isochrone', methods=['POST'])
 def generate_isochrone():
     """
@@ -267,13 +331,13 @@ def generate_isochrone():
         analyzer = PolygonAnalyzer()
         
         # Generate isochrone
-        wkt_string = analyzer.generate_mapbox_isochrone(
-            center_lat=center_lat,
-            center_lng=center_lng,
-            time_limit_minutes=time_limit,
-            mapbox_token=mapbox_token,
-            profile=routing_profile,
-            generalize_meters=generalize_meters,
+                wkt_string = analyzer.generate_mapbox_isochrone(
+                    center_lat=center_lat,
+                    center_lng=center_lng,
+                    time_limit_minutes=time_limit,
+                    mapbox_token=mapbox_token,
+                    profile=routing_profile,
+                    generalize_meters=generalize_meters,
             depart_at=depart_at
         )
         
@@ -281,16 +345,15 @@ def generate_isochrone():
             return jsonify({"error": "Failed to generate isochrone polygon"}), 500
         
         # Create CSV DataFrame
-        # Create CSV DataFrame
-        df_output = pd.DataFrame([{
-            "WKT": wkt_string,
-            "name": polygon_name
-        }])
-        
+                    df_output = pd.DataFrame([{
+                        "WKT": wkt_string,
+                        "name": polygon_name
+                    }])
+                    
         # Convert to CSV string
-        csv_buffer = io.StringIO()
-        df_output.to_csv(csv_buffer, index=False)
-        csv_data = csv_buffer.getvalue()
+                    csv_buffer = io.StringIO()
+                    df_output.to_csv(csv_buffer, index=False)
+                    csv_data = csv_buffer.getvalue()
         return jsonify({
             "wkt": wkt_string,
             "polygon_name": polygon_name,
@@ -299,7 +362,7 @@ def generate_isochrone():
     
     except ValueError as e:
         return jsonify({"error": f"Invalid input: {str(e)}"}), 400
-    except Exception as e:
+            except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
